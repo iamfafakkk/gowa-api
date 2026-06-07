@@ -2,6 +2,7 @@ import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
 import { Box, Paper, Stack, Typography } from "@mui/material";
 import SwaggerUI from "swagger-ui-react";
+import { withBasePath } from "../config/runtime";
 import "swagger-ui-react/swagger-ui.css";
 
 export function ApiDocsPage() {
@@ -67,7 +68,7 @@ export function ApiDocsPage() {
           }}
         >
           <SwaggerUI
-            url="/openapi.yaml"
+            url={withBasePath("/openapi.yaml")}
             docExpansion="list"
             defaultModelsExpandDepth={-1}
             displayRequestDuration

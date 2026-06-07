@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { buildDeviceSummary } from "../features/devices/selectors";
+import { DEVICES_PATH } from "../navigation/navSections";
 import { useDevices } from "../features/devices/useDevices";
 
 const summaryItems = [
@@ -90,7 +91,7 @@ export function DashboardPage() {
               </Button>
               <Button
                 component={RouterLink}
-                to="/devices"
+                to={DEVICES_PATH}
                 variant="contained"
                 endIcon={<ArrowOutwardRoundedIcon />}
               >
@@ -176,7 +177,7 @@ export function DashboardPage() {
             </Box>
             <Button
               component={RouterLink}
-              to="/devices"
+              to={DEVICES_PATH}
               variant="contained"
               endIcon={<ArrowOutwardRoundedIcon />}
             >

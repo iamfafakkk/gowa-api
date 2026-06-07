@@ -1,8 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { appBasePath } from "../config/runtime";
 import { AppLayout } from "../layouts/AppLayout";
 import {
   API_DOCS_PATH,
-  DASHBOARD_PATH,
   DEVICES_PATH,
   firstNavItemPath,
 } from "../navigation/navSections";
@@ -16,10 +16,6 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to={firstNavItemPath} replace />,
-      },
-      {
-        path: DASHBOARD_PATH.slice(1),
         element: <DashboardPage />,
       },
       {
@@ -40,4 +36,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+], {
+  basename: appBasePath || undefined,
+});

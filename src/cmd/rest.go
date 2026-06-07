@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -11,13 +10,11 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/helpers"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/middleware"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
-	"github.com/dustin/go-humanize"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/template/html/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -34,12 +31,7 @@ func init() {
 	rootCmd.AddCommand(restCmd)
 }
 func restServer(_ *cobra.Command, _ []string) {
-	engine := html.NewFileSystem(http.FS(EmbedIndex), ".html")
-	engine.AddFunc("isEnableBasicAuth", func(token any) bool {
-		return token != nil
-	})
 	fiberConfig := fiber.Config{
-		Views:                   engine,
 		EnableTrustedProxyCheck: true,
 		BodyLimit:               int(config.WhatsappSettingMaxVideoSize),
 		Network:                 "tcp",
@@ -146,16 +138,9 @@ func restServer(_ *cobra.Command, _ []string) {
 		apiGroup.Get("/chatwoot/sync/status", chatwootHandler.SyncStatus)
 	}
 
-	apiGroup.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("views/index", fiber.Map{
-			"AppHost":        fmt.Sprintf("%s://%s", c.Protocol(), c.Hostname()),
-			"AppVersion":     config.AppVersion,
-			"AppBasePath":    config.AppBasePath,
-			"BasicAuthToken": c.UserContext().Value(middleware.AuthorizationValue("BASIC_AUTH")),
-			"MaxFileSize":    humanize.Bytes(uint64(config.WhatsappSettingMaxFileSize)),
-			"MaxVideoSize":   humanize.Bytes(uint64(config.WhatsappSettingMaxVideoSize)),
-		})
-	})
+	if err := registerFrontendBuild(app, config.AppBasePath, frontendBuildDir()); err != nil {
+		logrus.Fatalln(err)
+	}
 
 	go websocket.RunHub()
 

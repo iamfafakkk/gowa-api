@@ -9,9 +9,9 @@ export type NavItem = {
   icon: ReactNode;
 };
 
-export const DASHBOARD_PATH = "/dashboard";
-export const DEVICES_PATH = "/devices";
-export const API_DOCS_PATH = "/api-docs";
+export const DASHBOARD_PATH = "/";
+export const DEVICES_PATH = "/console/devices";
+export const API_DOCS_PATH = "/console/api-docs";
 
 export const navItems: NavItem[] = [
   {

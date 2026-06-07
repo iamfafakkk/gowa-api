@@ -6,8 +6,7 @@ import type {
   LoginCodeResult,
   LoginQrResult,
 } from "./types";
-
-const API_BASE = "/api";
+import { withBasePath } from "../../config/runtime";
 
 type ApiEnvelope<T> = {
   message?: string;
@@ -31,13 +30,13 @@ function withDeviceHeader(deviceId: string): HeadersInit {
 }
 
 export async function listDevices(): Promise<DeviceRecord[]> {
-  const response = await fetch(`${API_BASE}/devices`);
+  const response = await fetch(withBasePath("/devices"));
   const results = await readJson<DeviceRecord[]>(response);
   return Array.isArray(results) ? results : [];
 }
 
 export async function createDevice(input: CreateDeviceInput): Promise<DeviceRecord> {
-  const response = await fetch(`${API_BASE}/devices`, {
+  const response = await fetch(withBasePath("/devices"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +50,7 @@ export async function createDevice(input: CreateDeviceInput): Promise<DeviceReco
 }
 
 export async function loginDeviceQr(deviceId: string): Promise<LoginQrResult> {
-  const response = await fetch(`${API_BASE}/app/login`, {
+  const response = await fetch(withBasePath("/app/login"), {
     headers: withDeviceHeader(deviceId),
   });
 
@@ -70,7 +69,7 @@ export async function loginDeviceQr(deviceId: string): Promise<LoginQrResult> {
 
 export async function loginDeviceWithCode(input: LoginCodeInput): Promise<LoginCodeResult> {
   const params = new URLSearchParams({ phone: input.phone });
-  const response = await fetch(`${API_BASE}/app/login-with-code?${params.toString()}`, {
+  const response = await fetch(withBasePath(`/app/login-with-code?${params.toString()}`), {
     headers: withDeviceHeader(input.deviceId),
   });
 
@@ -88,7 +87,7 @@ export async function loginDeviceWithCode(input: LoginCodeInput): Promise<LoginC
 export async function getDeviceConnectionStatus(
   deviceId: string,
 ): Promise<DeviceConnectionStatus> {
-  const response = await fetch(`${API_BASE}/app/status`, {
+  const response = await fetch(withBasePath("/app/status"), {
     headers: withDeviceHeader(deviceId),
   });
 
@@ -106,7 +105,7 @@ export async function getDeviceConnectionStatus(
 }
 
 export async function logoutDevice(deviceId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/app/logout`, {
+  const response = await fetch(withBasePath("/app/logout"), {
     headers: withDeviceHeader(deviceId),
   });
 
@@ -114,7 +113,7 @@ export async function logoutDevice(deviceId: string): Promise<void> {
 }
 
 export async function deleteDevice(deviceId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/devices/${encodeURIComponent(deviceId)}`, {
+  const response = await fetch(withBasePath(`/devices/${encodeURIComponent(deviceId)}`), {
     method: "DELETE",
   });
 
