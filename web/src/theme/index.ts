@@ -3,27 +3,31 @@ import { createTheme } from "@mui/material/styles";
 export const appTheme = createTheme({
   palette: {
     primary: {
-      main: "#0f5cc0",
+      main: "#00796b",
     },
     secondary: {
-      main: "#0b3a75",
+      main: "#004d40",
     },
     background: {
-      default: "#f3f6fb",
+      default: "#f4f7f4",
       paper: "#ffffff",
     },
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 20,
   },
   typography: {
-    fontFamily: '"Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    fontFamily: '"Manrope", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
     h2: {
-      fontWeight: 700,
+      fontWeight: 800,
+      letterSpacing: "-0.03em",
+    },
+    h3: {
+      fontWeight: 800,
       letterSpacing: "-0.03em",
     },
     h4: {
-      fontWeight: 700,
+      fontWeight: 800,
       letterSpacing: "-0.02em",
     },
   },
