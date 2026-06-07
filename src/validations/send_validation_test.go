@@ -60,6 +60,54 @@ func TestValidateSendMessage(t *testing.T) {
 	}
 }
 
+func TestValidateSendMessage_WithDelay(t *testing.T) {
+	tests := []struct {
+		name    string
+		request domainSend.MessageRequest
+		err     any
+	}{
+		{
+			name: "allows nil delay",
+			request: domainSend.MessageRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Message: "Hello this is testing",
+			},
+			err: nil,
+		},
+		{
+			name: "allows zero delay",
+			request: domainSend.MessageRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Message:      "Hello this is testing",
+				DelaySeconds: func() *int { v := 0; return &v }(),
+			},
+			err: nil,
+		},
+		{
+			name: "rejects negative delay",
+			request: domainSend.MessageRequest{
+				BaseRequest: domainSend.BaseRequest{
+					Phone: "1728937129312@s.whatsapp.net",
+				},
+				Message:      "Hello this is testing",
+				DelaySeconds: func() *int { v := -1; return &v }(),
+			},
+			err: pkgError.ValidationError("delay must be greater than or equal to 0"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSendMessage(context.Background(), tt.request)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+}
+
 func TestValidateSendImage(t *testing.T) {
 	image := &multipart.FileHeader{
 		Filename: "sample-image.png",

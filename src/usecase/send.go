@@ -41,12 +41,14 @@ var webpCanvasSizeRegex = regexp.MustCompile(`Canvas size:\s*(\d+)\s*x\s*(\d+)`)
 type serviceSend struct {
 	appService      app.IAppUsecase
 	chatStorageRepo domainChatStorage.IChatStorageRepository
+	sleep           func(time.Duration)
 }
 
 func NewSendService(appService app.IAppUsecase, chatStorageRepo domainChatStorage.IChatStorageRepository) domainSend.ISendUsecase {
 	return &serviceSend{
 		appService:      appService,
 		chatStorageRepo: chatStorageRepo,
+		sleep:           time.Sleep,
 	}
 }
 
@@ -138,6 +140,8 @@ func (service serviceSend) SendText(ctx context.Context, request domainSend.Mess
 		return response, err
 	}
 
+	service.waitForDelay(request.DelaySeconds)
+
 	// Create base message
 	msg := &waE2E.Message{
 		ExtendedTextMessage: &waE2E.ExtendedTextMessage{
@@ -184,6 +188,18 @@ func (service serviceSend) SendText(ctx context.Context, request domainSend.Mess
 	response.MessageID = ts.ID
 	response.Status = fmt.Sprintf("Message sent to %s (server timestamp: %s)", request.Phone, ts.Timestamp.String())
 	return response, nil
+}
+
+func (service serviceSend) waitForDelay(delaySeconds *int) {
+	if delaySeconds == nil || *delaySeconds <= 0 {
+		return
+	}
+
+	sleep := service.sleep
+	if sleep == nil {
+		sleep = time.Sleep
+	}
+	sleep(time.Duration(*delaySeconds) * time.Second)
 }
 
 func (service serviceSend) SendImage(ctx context.Context, request domainSend.ImageRequest) (response domainSend.GenericResponse, err error) {

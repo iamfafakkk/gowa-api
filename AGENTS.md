@@ -99,6 +99,23 @@ go-whatsapp-web-multidevice/
 - Release workflows generate GoReleaser YAML into `/tmp`; there is no committed `.goreleaser.yml`.
 - `src/pkg/error` declares package name `error`; import it with aliases such as `pkgError`.
 
+## SUPERPOWERS SKILLS
+
+When planning or implementing features, **always invoke the `prd` skill first** to generate a Product Requirements Document before writing any code.
+
+- **Planning phase**: Run the `prd` skill to produce a structured PRD that covers goals, scope, user stories, acceptance criteria, and technical considerations. Store the output in `docs/superpowers/plans/` with a date-prefixed filename (e.g. `2026-06-07-feature-name.md`).
+- **Implementation phase**: Reference the generated PRD throughout implementation. If requirements shift mid-implementation, re-run the `prd` skill to update the spec before continuing.
+- **Trigger phrases**: `create a prd`, `write prd for`, `plan this feature`, `requirements for`, `spec out`.
+- PRDs are living documents — keep them in sync with what is actually built.
+
+## RESEARCH TOOLS
+
+When information is unclear, ambiguous, or insufficient to complete a task, **use the `perplexity-web-mcp` skill** (via `pwm ask` or `pplx_*` MCP tools) to search the web and gather the missing context before proceeding.
+
+- Prefer `pwm ask "<question>"` for quick lookups (library docs, API behavior, error causes, best practices).
+- Use `pwm research "<topic>"` for deeper investigation when the task requires thorough understanding.
+- Always search before guessing — if a dependency, API, or pattern is unfamiliar, look it up first.
+
 ## COMMANDS
 
 ```bash

@@ -14,7 +14,12 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { navItems } from "../navigation/navSections";
+import {
+  findActiveNavLeaf,
+  isGroupActive,
+  isNavGroup,
+  navEntries,
+} from "../navigation/navSections";
 
 const drawerWidth = 316;
 
@@ -67,39 +72,112 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 1.25, py: 1.5 }}>
         <List disablePadding sx={{ display: "grid", gap: 0.5 }}>
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {navEntries.map((entry) => {
+            if (!isNavGroup(entry)) {
+              const isActive = location.pathname === entry.path;
 
-            return (
-              <ListItemButton
-                key={item.path}
-                component={NavLink}
-                to={item.path}
-                onClick={onNavigate}
-                sx={{
-                  borderRadius: 3,
-                  px: 1.4,
-                  py: 1.25,
-                  border: "1px solid transparent",
-                  bgcolor: isActive ? "rgba(0, 150, 136, 0.12)" : "transparent",
-                  borderColor: isActive ? "rgba(0, 150, 136, 0.24)" : "transparent",
-                  "&:hover": {
-                    bgcolor: "rgba(0, 150, 136, 0.08)",
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, color: isActive ? "primary.main" : "inherit" }}>
-                  {item.icon}
-                </ListItemIcon>
-                <Typography
+              return (
+                <ListItemButton
+                  key={entry.path}
+                  component={NavLink}
+                  to={entry.path}
+                  onClick={onNavigate}
                   sx={{
-                    fontWeight: isActive ? 700 : 600,
-                    color: "text.primary",
+                    borderRadius: 3,
+                    px: 1.4,
+                    py: 1.25,
+                    border: "1px solid transparent",
+                    bgcolor: isActive ? "rgba(0, 150, 136, 0.12)" : "transparent",
+                    borderColor: isActive ? "rgba(0, 150, 136, 0.24)" : "transparent",
+                    "&:hover": {
+                      bgcolor: "rgba(0, 150, 136, 0.08)",
+                    },
                   }}
                 >
-                  {item.label}
-                </Typography>
-              </ListItemButton>
+                  <ListItemIcon
+                    sx={{ minWidth: 40, color: isActive ? "primary.main" : "inherit" }}
+                  >
+                    {entry.icon}
+                  </ListItemIcon>
+                  <Typography
+                    sx={{
+                      fontWeight: isActive ? 700 : 600,
+                      color: "text.primary",
+                    }}
+                  >
+                    {entry.label}
+                  </Typography>
+                </ListItemButton>
+              );
+            }
+
+            const groupActive = isGroupActive(entry, location.pathname);
+
+            return (
+              <Box key={entry.label} sx={{ display: "grid", gap: 0.5, pt: 0.75 }}>
+                <Stack
+                  direction="row"
+                  spacing={1.4}
+                  sx={{
+                    alignItems: "center",
+                    px: 1.4,
+                    py: 0.75,
+                    color: groupActive ? "primary.main" : "text.secondary",
+                  }}
+                >
+                  <Box sx={{ minWidth: 24, display: "grid", placeItems: "center" }}>{entry.icon}</Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {entry.label}
+                  </Typography>
+                </Stack>
+
+                <List disablePadding sx={{ display: "grid", gap: 0.5, pl: 1.25 }}>
+                  {entry.children.map((item) => {
+                    const isActive = location.pathname === item.path;
+
+                    return (
+                      <ListItemButton
+                        key={item.path}
+                        component={NavLink}
+                        to={item.path}
+                        onClick={onNavigate}
+                        sx={{
+                          borderRadius: 3,
+                          px: 1.4,
+                          py: 1.15,
+                          border: "1px solid transparent",
+                          bgcolor: isActive ? "rgba(0, 150, 136, 0.12)" : "transparent",
+                          borderColor: isActive ? "rgba(0, 150, 136, 0.24)" : "transparent",
+                          "&:hover": {
+                            bgcolor: "rgba(0, 150, 136, 0.08)",
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{ minWidth: 40, color: isActive ? "primary.main" : "inherit" }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        <Typography
+                          sx={{
+                            fontWeight: isActive ? 700 : 600,
+                            color: "text.primary",
+                          }}
+                        >
+                          {item.label}
+                        </Typography>
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+              </Box>
             );
           })}
         </List>
@@ -111,8 +189,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const activeItem =
-    navItems.find((item) => location.pathname === item.path) ?? navItems[0] ?? null;
+  const activeItem = findActiveNavLeaf(location.pathname);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>

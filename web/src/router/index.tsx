@@ -5,9 +5,11 @@ import {
   API_DOCS_PATH,
   DEVICES_PATH,
   firstNavItemPath,
+  SEND_MESSAGES_PATH,
 } from "../navigation/navSections";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DevicesPage } from "../pages/DevicesPage";
+import { SendMessagesPage } from "../pages/SendMessagesPage";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +23,10 @@ export const router = createBrowserRouter([
       {
         path: DEVICES_PATH.slice(1),
         element: <DevicesPage />,
+      },
+      {
+        path: SEND_MESSAGES_PATH.slice(1),
+        element: <SendMessagesPage />,
       },
       {
         path: API_DOCS_PATH.slice(1),

@@ -1,6 +1,9 @@
 package rest
 
 import (
+	"errors"
+	"strconv"
+
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/utils"
@@ -8,12 +11,14 @@ import (
 )
 
 type Send struct {
-	Service domainSend.ISendUsecase
+	Service      domainSend.ISendUsecase
+	AsyncService domainSend.ISendJobUsecase
 }
 
-func InitRestSend(app fiber.Router, service domainSend.ISendUsecase) Send {
-	rest := Send{Service: service}
+func InitRestSend(app fiber.Router, service domainSend.ISendUsecase, asyncService domainSend.ISendJobUsecase) Send {
+	rest := Send{Service: service, AsyncService: asyncService}
 	app.Post("/send/message", rest.SendText)
+	app.Get("/send/message/status", rest.SendTextStatus)
 	app.Post("/send/image", rest.SendImage)
 	app.Post("/send/file", rest.SendFile)
 	app.Post("/send/video", rest.SendVideo)
@@ -33,15 +38,84 @@ func (controller *Send) SendText(c *fiber.Ctx) error {
 	err := c.BodyParser(&request)
 	utils.PanicIfNeeded(err)
 
-	utils.SanitizePhone(&request.Phone)
+	delaySeconds, err := parseDelaySeconds(c.Query("delay"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
+			Status:  fiber.StatusBadRequest,
+			Code:    "INVALID_REQUEST",
+			Message: err.Error(),
+		})
+	}
+	request.DelaySeconds = delaySeconds
 
-	response, err := controller.Service.SendText(whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c)), request)
+	utils.SanitizePhone(&request.Phone)
+	ctx := whatsapp.ContextWithDevice(c.UserContext(), getDeviceFromCtx(c))
+
+	if c.Query("async") == "1" {
+		response, err := controller.AsyncService.EnqueueText(ctx, request)
+		utils.PanicIfNeeded(err)
+
+		return c.Status(fiber.StatusAccepted).JSON(utils.ResponseData{
+			Status:  fiber.StatusAccepted,
+			Code:    "ACCEPTED",
+			Message: response.Message,
+			Results: response,
+		})
+	}
+
+	response, err := controller.Service.SendText(ctx, request)
 	utils.PanicIfNeeded(err)
 
 	return c.JSON(utils.ResponseData{
 		Status:  200,
 		Code:    "SUCCESS",
 		Message: response.Status,
+		Results: response,
+	})
+}
+
+func parseDelaySeconds(raw string) (*int, error) {
+	if raw == "" {
+		return nil, nil
+	}
+
+	delay, err := strconv.Atoi(raw)
+	if err != nil {
+		return nil, errors.New("delay must be a non-negative integer")
+	}
+	if delay < 0 {
+		return nil, errors.New("delay must be a non-negative integer")
+	}
+
+	return &delay, nil
+}
+
+func (controller *Send) SendTextStatus(c *fiber.Ctx) error {
+	jobID := c.Query("job_id")
+	if jobID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(utils.ResponseData{
+			Status:  fiber.StatusBadRequest,
+			Code:    "INVALID_REQUEST",
+			Message: "job_id query parameter is required",
+		})
+	}
+
+	response, err := controller.AsyncService.GetJob(jobID)
+	if err != nil {
+		if errors.Is(err, domainSend.ErrSendJobNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(utils.ResponseData{
+				Status:  fiber.StatusNotFound,
+				Code:    "SEND_JOB_NOT_FOUND",
+				Message: "Send job not found. It may never have existed or was lost after process restart.",
+			})
+		}
+		utils.PanicIfNeeded(err)
+	}
+
+	return c.JSON(utils.ResponseData{
+		Status:  fiber.StatusOK,
+		Code:    "SUCCESS",
+		Message: "Send job status retrieved",
 		Results: response,
 	})
 }

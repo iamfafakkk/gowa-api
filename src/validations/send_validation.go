@@ -61,6 +61,16 @@ func validatePhoneNumber(phone string) error {
 	return nil
 }
 
+func validateDelaySeconds(delay *int) error {
+	if delay == nil {
+		return nil
+	}
+	if *delay < 0 {
+		return pkgError.ValidationError("delay must be greater than or equal to 0")
+	}
+	return nil
+}
+
 func ValidateSendMessage(ctx context.Context, request domainSend.MessageRequest) error {
 	err := validation.ValidateStructWithContext(ctx, &request,
 		validation.Field(&request.Phone, validation.Required),
@@ -78,6 +88,10 @@ func ValidateSendMessage(ctx context.Context, request domainSend.MessageRequest)
 
 	// Custom validation for optional Duration
 	if err := validateDuration(request.Duration); err != nil {
+		return err
+	}
+
+	if err := validateDelaySeconds(request.DelaySeconds); err != nil {
 		return err
 	}
 

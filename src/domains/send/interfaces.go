@@ -9,6 +9,11 @@ type ITextSender interface {
 	SendText(ctx context.Context, request MessageRequest) (response GenericResponse, err error)
 }
 
+type ISendJobUsecase interface {
+	EnqueueText(ctx context.Context, request MessageRequest) (response SendJobAcceptedResponse, err error)
+	GetJob(jobID string) (response SendJobStatusResponse, err error)
+}
+
 // IMediaSender handles media message sending operations
 type IMediaSender interface {
 	SendImage(ctx context.Context, request ImageRequest) (response GenericResponse, err error)

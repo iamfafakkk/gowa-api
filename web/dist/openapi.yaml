@@ -826,6 +826,13 @@ paths:
       summary: Send Message
       parameters:
         - $ref: '#/components/parameters/DeviceIdHeader'
+        - in: query
+          name: delay
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Optional delay in seconds before the actual message send starts.
       requestBody:
         content:
           application/json:

@@ -116,7 +116,7 @@ func restServer(_ *cobra.Command, _ []string) {
 	registerDeviceScopedRoutes := func(r fiber.Router) {
 		rest.InitRestApp(r, appUsecase)
 		rest.InitRestChat(r, chatUsecase)
-		rest.InitRestSend(r, sendUsecase)
+		rest.InitRestSend(r, sendUsecase, sendJobUsecase)
 		rest.InitRestUser(r, userUsecase)
 		rest.InitRestMessage(r, messageUsecase)
 		rest.InitRestGroup(r, groupUsecase)

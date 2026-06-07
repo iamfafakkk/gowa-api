@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, test } from "vitest";
 import {
   filterDevices,
   getDeviceStateBucket,
@@ -42,52 +41,54 @@ const devices: DeviceRecord[] = [
   },
 ];
 
-test("search matches device key, display name, and jid case-insensitively", () => {
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "ALPHA", stateFilter: "All" }).map((device) => device.id),
-    ["alpha-01"],
-  );
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "tablet", stateFilter: "All" }).map((device) => device.id),
-    ["beta-02"],
-  );
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "MIXEDCASE", stateFilter: "All" }).map((device) => device.id),
-    ["epsilon-05"],
-  );
-});
+describe("device selectors", () => {
+  test("search matches device key, display name, and jid case-insensitively", () => {
+    expect(
+      filterDevices(devices, { searchQuery: "ALPHA", stateFilter: "All" }).map((device) => device.id),
+    ).toEqual(["alpha-01"]);
+    expect(
+      filterDevices(devices, { searchQuery: "tablet", stateFilter: "All" }).map((device) => device.id),
+    ).toEqual(["beta-02"]);
+    expect(
+      filterDevices(devices, { searchQuery: "MIXEDCASE", stateFilter: "All" }).map((device) => device.id),
+    ).toEqual(["epsilon-05"]);
+  });
 
-test("state filter all returns all devices", () => {
-  assert.equal(filterDevices(devices, { searchQuery: "", stateFilter: "All" }).length, devices.length);
-});
+  test("state filter all returns all devices", () => {
+    expect(filterDevices(devices, { searchQuery: "", stateFilter: "All" }).length).toBe(
+      devices.length,
+    );
+  });
 
-test("state filter matches known states only", () => {
-  const filters: DeviceStateFilter[] = ["logged_in", "connected", "connecting", "disconnected"];
+  test("state filter matches known states only", () => {
+    const filters: DeviceStateFilter[] = ["logged_in", "connected", "connecting", "disconnected"];
 
-  for (const stateFilter of filters) {
-    const result = filterDevices(devices, { searchQuery: "", stateFilter });
-    assert.ok(result.every((device) => getDeviceStateBucket(device.state) === stateFilter));
-  }
-});
+    for (const stateFilter of filters) {
+      const result = filterDevices(devices, { searchQuery: "", stateFilter });
+      expect(result.every((device) => getDeviceStateBucket(device.state) === stateFilter)).toBe(
+        true,
+      );
+    }
+  });
 
-test("other groups empty and unknown states", () => {
-  assert.equal(getDeviceStateBucket(""), "Other");
-  assert.equal(getDeviceStateBucket(undefined), "Other");
-  assert.equal(getDeviceStateBucket("custom_state"), "Other");
+  test("other groups empty and unknown states", () => {
+    expect(getDeviceStateBucket("")).toBe("Other");
+    expect(getDeviceStateBucket(undefined)).toBe("Other");
+    expect(getDeviceStateBucket("custom_state")).toBe("Other");
 
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "", stateFilter: "Other" }).map((device) => device.id ?? device.device),
-    ["gamma-03", "delta-04"],
-  );
-});
+    expect(
+      filterDevices(devices, { searchQuery: "", stateFilter: "Other" }).map(
+        (device) => device.id ?? device.device,
+      ),
+    ).toEqual(["gamma-03", "delta-04"]);
+  });
 
-test("search and state filter combine as intersection", () => {
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "hub", stateFilter: "connecting" }).map((device) => device.id),
-    ["epsilon-05"],
-  );
-  assert.deepEqual(
-    filterDevices(devices, { searchQuery: "hub", stateFilter: "connected" }),
-    [],
-  );
+  test("search and state filter combine as intersection", () => {
+    expect(
+      filterDevices(devices, { searchQuery: "hub", stateFilter: "connecting" }).map(
+        (device) => device.id,
+      ),
+    ).toEqual(["epsilon-05"]);
+    expect(filterDevices(devices, { searchQuery: "hub", stateFilter: "connected" })).toEqual([]);
+  });
 });
