@@ -38,4 +38,4 @@ tmp/
 .worktrees/
 
 # whatsmeow store (legacy path)
-src/whatsapp/
+src/whatsapp
