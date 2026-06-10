@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 const backendTarget = "http://localhost:3000";
 const proxyRoutes = [
   "/app",
+  "/auth",   // Added for the new auth endpoints (login, users, etc.)
   "/chat",
   "/chatwoot",
   "/chats",

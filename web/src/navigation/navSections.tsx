@@ -1,5 +1,6 @@
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import DevicesRoundedIcon from "@mui/icons-material/DevicesRounded";
+import PeopleRoundedIcon from "@mui/icons-material/PeopleRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import SmsRoundedIcon from "@mui/icons-material/SmsRounded";
 import MenuBookRoundedIcon from "@mui/icons-material/MenuBookRounded";
@@ -23,6 +24,7 @@ export const DASHBOARD_PATH = "/";
 export const DEVICES_PATH = "/console/devices";
 export const SEND_MESSAGES_PATH = "/console/send/messages";
 export const API_DOCS_PATH = "/console/api-docs";
+export const USERS_PATH = "/console/users";
 
 export const navEntries: NavEntry[] = [
   {
@@ -34,6 +36,11 @@ export const navEntries: NavEntry[] = [
     label: "Devices",
     path: DEVICES_PATH,
     icon: <DevicesRoundedIcon fontSize="small" />,
+  },
+  {
+    label: "Users",
+    path: USERS_PATH,
+    icon: <PeopleRoundedIcon fontSize="small" />,
   },
   {
     label: "Send",

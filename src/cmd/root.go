@@ -13,6 +13,7 @@ import (
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	domainApp "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/app"
+	domainAuth "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/auth"
 	domainChat "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chat"
 	domainChatStorage "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/chatstorage"
 	domainDevice "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/device"
@@ -21,6 +22,7 @@ import (
 	domainNewsletter "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/newsletter"
 	domainSend "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/send"
 	domainUser "github.com/aldinokemal/go-whatsapp-web-multidevice/domains/user"
+	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/auth"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/chatstorage"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/pkg/sqlite"
@@ -43,6 +45,12 @@ var (
 	// Chat Storage
 	chatStorageDB   *sql.DB
 	chatStorageRepo domainChatStorage.IChatStorageRepository
+
+	// Auth Storage (dedicated SQLite for console/web UI users + management panel)
+	authStorageDB  *sql.DB
+	authRepo       domainAuth.IAuthRepository
+	authUsecase    domainAuth.IAuthUsecase
+
 
 	// Usecase
 	appUsecase        domainApp.IAppUsecase
@@ -112,6 +120,21 @@ func initEnvConfig() {
 	}
 	if envDBKEYSURI := viper.GetString("db_keys_uri"); envDBKEYSURI != "" {
 		config.DBKeysURI = envDBKEYSURI
+	}
+
+	// Auth / console user storage (dedicated DB for web login + management panel)
+	if envAuthDBURI := viper.GetString("auth_db_uri"); envAuthDBURI != "" {
+		config.AuthStorageURI = envAuthDBURI
+	}
+	if envAuthJWTSecret := viper.GetString("auth_jwt_secret"); envAuthJWTSecret != "" {
+		config.AuthJWTSecret = envAuthJWTSecret
+	}
+	// Auth seed for initial admin user (only used if no users exist)
+	if env := viper.GetString("auth_seed_username"); env != "" {
+		config.AuthSeedUsername = env
+	}
+	if env := viper.GetString("auth_seed_password"); env != "" {
+		config.AuthSeedPassword = env
 	}
 
 	// WhatsApp settings
@@ -250,6 +273,32 @@ func initFlags() {
 		`the database uri to store the optional keys cache (by default, we'll use the same database uri). avoid in-memory storage in production. database uri --db-keys-uri <string> | example: --db-keys-uri="file:storages/whatsapp-keys.db?_foreign_keys=on"`,
 	)
 
+	// Auth / web console user database flags (dedicated SQLite, separate from chat storage and WhatsApp DBs)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.AuthStorageURI,
+		"auth-db-uri", "",
+		config.AuthStorageURI,
+		`dedicated sqlite db for web console authentication users (login + management panel) --auth-db-uri <string> | example: --auth-db-uri="file:storages/auth.db?_foreign_keys=on"`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.AuthJWTSecret,
+		"auth-jwt-secret", "",
+		config.AuthJWTSecret,
+		`secret used to sign JWT tokens for web console sessions (required in production) --auth-jwt-secret <string>`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.AuthSeedUsername,
+		"auth-seed-username", "",
+		config.AuthSeedUsername,
+		`if no users exist, seed a default admin with this username on startup (pair with --auth-seed-password)`,
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&config.AuthSeedPassword,
+		"auth-seed-password", "",
+		config.AuthSeedPassword,
+		`if no users exist, seed a default admin with this password on startup`,
+	)
+
 	// WhatsApp flags
 	rootCmd.PersistentFlags().StringVarP(
 		&config.WhatsappAutoReplyMessage,
@@ -378,6 +427,67 @@ func initChatStorage() (*sql.DB, error) {
 	return db, nil
 }
 
+func initAuthStorage() (*sql.DB, domainAuth.IAuthRepository, error) {
+	connStr := sqlite.FormatChatStorageURI(config.AuthStorageURI, config.AuthStorageEnableWAL, config.AuthStorageEnableForeignKeys)
+
+	db, err := sql.Open(sqlite.DriverName, connStr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, nil, fmt.Errorf("failed to ping auth database: %w", err)
+	}
+
+	repo := auth.NewSQLiteAuthRepository(db)
+	if err := repo.InitializeSchema(); err != nil {
+		db.Close()
+		return nil, nil, fmt.Errorf("failed to initialize auth schema: %w", err)
+	}
+
+	return db, repo, nil
+}
+
+// seedInitialAdminUserIfNeeded creates a default admin user on startup
+// only if no users exist in the auth database and AUTH_SEED_USERNAME +
+// AUTH_SEED_PASSWORD are provided via env/flag.
+func seedInitialAdminUserIfNeeded() {
+	if authUsecase == nil {
+		return
+	}
+	if config.AuthSeedUsername == "" || config.AuthSeedPassword == "" {
+		return
+	}
+
+	// Check if any users already exist
+	count, err := authRepo.CountUsers()
+	if err != nil {
+		logrus.Warnf("auth seed: failed to count users: %v", err)
+		return
+	}
+	if count > 0 {
+		// Users already exist, skip seeding
+		return
+	}
+
+	ctx := context.Background()
+	_, err = authUsecase.CreateUser(ctx, domainAuth.CreateUserRequest{
+		Username: config.AuthSeedUsername,
+		Password: config.AuthSeedPassword,
+		Role:     "admin",
+	}, nil) // nil actor is allowed for bootstrap when count==0
+
+	if err != nil {
+		logrus.Warnf("auth seed: failed to create initial admin user %q: %v", config.AuthSeedUsername, err)
+	} else {
+		logrus.Infof("auth seed: created initial admin user %q (remove AUTH_SEED_* after first run)", config.AuthSeedUsername)
+	}
+}
+
 func initApp() {
 	if config.AppDebug {
 		config.WhatsappLogLevel = "DEBUG"
@@ -400,6 +510,12 @@ func initApp() {
 
 	chatStorageRepo = chatstorage.NewStorageRepository(chatStorageDB)
 	chatStorageRepo.InitializeSchema()
+
+	// Dedicated auth storage for web console users (login + management panel)
+	authStorageDB, authRepo, err = initAuthStorage()
+	if err != nil {
+		logrus.Fatalf("failed to initialize auth storage: %v", err)
+	}
 
 	whatsappDB := whatsapp.InitWaDB(ctx, config.DBURI)
 	var keysDB *sqlstore.Container
@@ -425,6 +541,12 @@ func initApp() {
 	groupUsecase = usecase.NewGroupService()
 	newsletterUsecase = usecase.NewNewsletterService()
 	deviceUsecase = usecase.NewDeviceService(dm)
+
+	// Console / web auth usecase (uses its own dedicated repo + DB)
+	if authRepo != nil {
+		authUsecase = usecase.NewAuthService(authRepo)
+		seedInitialAdminUserIfNeeded()
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -54,6 +54,21 @@ var (
 	ChatStorageEnableForeignKeys = true
 	ChatStorageEnableWAL         = true
 
+	// AuthStorageURI points to the dedicated SQLite used exclusively for console/web UI
+	// user authentication (login) and the user management panel. It is intentionally
+	// separate from chatstorage.db and the per-device WhatsApp session DBs.
+	AuthStorageURI               = "file:storages/auth.db"
+	AuthStorageEnableForeignKeys = true
+	AuthStorageEnableWAL         = true
+	AuthJWTSecret                = "" // Set via --auth-jwt-secret / AUTH_JWT_SECRET. If empty at startup a dev fallback is used with a warning.
+
+	// AuthSeedUsername / AuthSeedPassword: if set and no users exist in the auth DB
+	// at startup, a default admin user will be created automatically (seeded).
+	// This is intended only for initial deployment. It is strongly recommended to
+	// remove or unset these values after the first successful run.
+	AuthSeedUsername string
+	AuthSeedPassword string
+
 	ChatwootEnabled   = false
 	ChatwootURL       = ""
 	ChatwootAPIToken  = ""

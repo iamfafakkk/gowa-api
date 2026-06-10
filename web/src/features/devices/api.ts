@@ -7,6 +7,7 @@ import type {
   LoginQrResult,
 } from "./types";
 import { withBasePath } from "../../config/runtime";
+import { withAuthHeader } from "../auth/api";
 
 type ApiEnvelope<T> = {
   message?: string;
@@ -30,29 +31,33 @@ function withDeviceHeader(deviceId: string): HeadersInit {
 }
 
 export async function listDevices(): Promise<DeviceRecord[]> {
-  const response = await fetch(withBasePath("/devices"));
+  const response = await fetch(withBasePath("/devices"), withAuthHeader());
   const results = await readJson<DeviceRecord[]>(response);
   return Array.isArray(results) ? results : [];
 }
 
 export async function createDevice(input: CreateDeviceInput): Promise<DeviceRecord> {
-  const response = await fetch(withBasePath("/devices"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      device_id: input.deviceId?.trim() || undefined,
-    }),
-  });
+  const response = await fetch(
+    withBasePath("/devices"),
+    withAuthHeader({
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        device_id: input.deviceId?.trim() || undefined,
+      }),
+    })
+  );
 
   return readJson<DeviceRecord>(response);
 }
 
 export async function loginDeviceQr(deviceId: string): Promise<LoginQrResult> {
-  const response = await fetch(withBasePath("/app/login"), {
-    headers: withDeviceHeader(deviceId),
-  });
+  const response = await fetch(
+    withBasePath("/app/login"),
+    withAuthHeader({ headers: withDeviceHeader(deviceId) })
+  );
 
   const results = await readJson<{
     device_id?: string;
@@ -69,9 +74,10 @@ export async function loginDeviceQr(deviceId: string): Promise<LoginQrResult> {
 
 export async function loginDeviceWithCode(input: LoginCodeInput): Promise<LoginCodeResult> {
   const params = new URLSearchParams({ phone: input.phone });
-  const response = await fetch(withBasePath(`/app/login-with-code?${params.toString()}`), {
-    headers: withDeviceHeader(input.deviceId),
-  });
+  const response = await fetch(
+    withBasePath(`/app/login-with-code?${params.toString()}`),
+    withAuthHeader({ headers: withDeviceHeader(input.deviceId) })
+  );
 
   const results = await readJson<{
     device_id?: string;
@@ -87,9 +93,10 @@ export async function loginDeviceWithCode(input: LoginCodeInput): Promise<LoginC
 export async function getDeviceConnectionStatus(
   deviceId: string,
 ): Promise<DeviceConnectionStatus> {
-  const response = await fetch(withBasePath("/app/status"), {
-    headers: withDeviceHeader(deviceId),
-  });
+  const response = await fetch(
+    withBasePath("/app/status"),
+    withAuthHeader({ headers: withDeviceHeader(deviceId) })
+  );
 
   const results = await readJson<{
     device_id?: string;
@@ -105,17 +112,19 @@ export async function getDeviceConnectionStatus(
 }
 
 export async function logoutDevice(deviceId: string): Promise<void> {
-  const response = await fetch(withBasePath("/app/logout"), {
-    headers: withDeviceHeader(deviceId),
-  });
+  const response = await fetch(
+    withBasePath("/app/logout"),
+    withAuthHeader({ headers: withDeviceHeader(deviceId) })
+  );
 
   await readJson(response);
 }
 
 export async function deleteDevice(deviceId: string): Promise<void> {
-  const response = await fetch(withBasePath(`/devices/${encodeURIComponent(deviceId)}`), {
-    method: "DELETE",
-  });
+  const response = await fetch(
+    withBasePath(`/devices/${encodeURIComponent(deviceId)}`),
+    withAuthHeader({ method: "DELETE" })
+  );
 
   await readJson(response);
 }

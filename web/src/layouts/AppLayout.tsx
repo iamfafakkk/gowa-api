@@ -1,3 +1,4 @@
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
@@ -10,10 +11,12 @@ import {
   ListItemIcon,
   Stack,
   Toolbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../features/auth/AuthContext";
 import {
   findActiveNavLeaf,
   isGroupActive,
@@ -213,7 +216,7 @@ export function AppLayout() {
             <MenuRoundedIcon />
           </IconButton>
 
-          <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+          <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1 }}>
             <Typography variant="body2" color="text.secondary">
               Standalone SPA
             </Typography>
@@ -221,6 +224,8 @@ export function AppLayout() {
               {activeItem?.label ?? "Web Console"}
             </Typography>
           </Stack>
+
+          <UserHeader />
         </Toolbar>
       </AppBar>
 
@@ -274,5 +279,23 @@ export function AppLayout() {
         </Box>
       </Box>
     </Box>
+  );
+}
+
+function UserHeader() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
+
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+      <Typography variant="body2" sx={{ color: "text.secondary", display: { xs: "none", sm: "block" } }}>
+        {user.username}
+      </Typography>
+      <Tooltip title="Logout">
+        <IconButton size="small" onClick={logout} aria-label="Logout">
+          <LogoutRoundedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
   );
 }

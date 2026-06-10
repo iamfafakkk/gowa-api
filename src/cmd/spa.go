@@ -19,6 +19,7 @@ const (
 var reservedBackendPrefixes = []string{
 	"/app",
 	"/assets",
+	"/auth", // console auth (login + user management) - must not be served by SPA fallback
 	"/chat",
 	"/chatwoot",
 	"/chats",

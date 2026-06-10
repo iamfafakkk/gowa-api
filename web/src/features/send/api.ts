@@ -1,4 +1,5 @@
 import { withBasePath } from "../../config/runtime";
+import { withAuthHeader } from "../auth/api";
 import type { SendMessageInput, SendMessageResult } from "./types";
 
 type ApiEnvelope<T> = {
@@ -37,17 +38,20 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageR
 
   const endpoint = queryParts.length > 0 ? `/send/message?${queryParts.join("&")}` : "/send/message";
 
-  const response = await fetch(withBasePath(endpoint), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Device-Id": encodeURIComponent(input.deviceId),
-    },
-    body: JSON.stringify({
-      phone: input.phone.trim(),
-      message: input.message,
-    }),
-  });
+  const response = await fetch(
+    withBasePath(endpoint),
+    withAuthHeader({
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Device-Id": encodeURIComponent(input.deviceId),
+      },
+      body: JSON.stringify({
+        phone: input.phone.trim(),
+        message: input.message,
+      }),
+    })
+  );
 
   const payload = await readJson<SendMessageResponse>(response);
 

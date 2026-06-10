@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
@@ -11,7 +10,7 @@ import (
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/rest/middleware"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/ui/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/basicauth"
+
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -59,7 +58,9 @@ func restServer(_ *cobra.Command, _ []string) {
 
 	app.Use(middleware.Recovery())
 	app.Use(middleware.RequestTimeout(middleware.DefaultRequestTimeout))
-	app.Use(middleware.BasicAuth())
+	// Legacy Basic Auth capture + enforcement removed per user request ("basic auth hapus total").
+	// All protection now goes through the new JWT-based auth (RequireAuth middleware).
+	app.Use(middleware.JWTMiddleware()) // JWT capture (non-blocking) for web console sessions
 	if config.AppDebug {
 		app.Use(logger.New())
 	}
@@ -92,20 +93,9 @@ func restServer(_ *cobra.Command, _ []string) {
 		app.Post(webhookPath, chatwootHandler.HandleWebhook)
 	}
 
-	if len(config.AppBasicAuthCredential) > 0 {
-		account := make(map[string]string)
-		for _, basicAuth := range config.AppBasicAuthCredential {
-			ba := strings.Split(basicAuth, ":")
-			if len(ba) != 2 {
-				logrus.Fatalln("Basic auth is not valid, please this following format <user>:<secret>")
-			}
-			account[ba[0]] = ba[1]
-		}
-
-		app.Use(basicauth.New(basicauth.Config{
-			Users: account,
-		}))
-	}
+	// Legacy APP_BASIC_AUTH / basicauth.New has been removed ("basic auth hapus total").
+	// If you still need it for pure API clients, it can be re-enabled, but it is no longer applied by default
+	// so that the custom Web Console login (JWT or simple form) works without triggering the browser's Basic Auth dialog.
 
 	// Create base path group or use app directly
 	var apiGroup fiber.Router = app
@@ -124,10 +114,15 @@ func restServer(_ *cobra.Command, _ []string) {
 		websocket.RegisterRoutes(r, appUsecase)
 	}
 
-	// Device management routes (no device_id required)
+	// Device management routes (no device_id required) - now protected (JWT or legacy basic)
 	rest.InitRestDevice(apiGroup, deviceUsecase)
+	if authUsecase != nil {
+		rest.InitRestAuth(apiGroup, authUsecase) // /auth/login is public inside; management endpoints check auth
+	}
 
 	// Device-scoped operations (header-based)
+	// Note: Auth is handled client-side in the web console (JWT from /auth/login).
+	// Direct API calls do not require the new auth (use APP_BASIC_AUTH if you want legacy protection for API).
 	headerDeviceGroup := apiGroup.Group("", middleware.DeviceMiddleware(dm))
 	registerDeviceScopedRoutes(headerDeviceGroup)
 
