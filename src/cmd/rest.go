@@ -32,6 +32,7 @@ func init() {
 func restServer(_ *cobra.Command, _ []string) {
 	fiberConfig := fiber.Config{
 		EnableTrustedProxyCheck: true,
+		EnableIPValidation:      true,
 		BodyLimit:               int(config.WhatsappSettingMaxVideoSize),
 		Network:                 "tcp",
 	}
@@ -39,10 +40,18 @@ func restServer(_ *cobra.Command, _ []string) {
 	// Configure proxy settings if trusted proxies are specified
 	if len(config.AppTrustedProxies) > 0 {
 		fiberConfig.TrustedProxies = config.AppTrustedProxies
-		fiberConfig.ProxyHeader = fiber.HeaderXForwardedHost
+		fiberConfig.ProxyHeader = fiber.HeaderXForwardedFor
 	}
 
 	app := fiber.New(fiberConfig)
+
+	app.Use(middleware.Recovery())
+	app.Use(middleware.RequestTimeout(middleware.DefaultRequestTimeout))
+	ipWhitelistMiddleware, err := middleware.IPWhitelist(config.AppIPWhitelist)
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+	app.Use(ipWhitelistMiddleware)
 
 	app.Static(config.AppBasePath+"/statics", "./statics")
 	app.Use(config.AppBasePath+"/components", filesystem.New(filesystem.Config{
@@ -55,9 +64,6 @@ func restServer(_ *cobra.Command, _ []string) {
 		PathPrefix: "views/assets",
 		Browse:     true,
 	}))
-
-	app.Use(middleware.Recovery())
-	app.Use(middleware.RequestTimeout(middleware.DefaultRequestTimeout))
 	// Legacy Basic Auth capture + enforcement removed per user request ("basic auth hapus total").
 	// All protection now goes through the new JWT-based auth (RequireAuth middleware).
 	app.Use(middleware.JWTMiddleware()) // JWT capture (non-blocking) for web console sessions

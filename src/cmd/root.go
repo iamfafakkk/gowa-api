@@ -48,10 +48,9 @@ var (
 	chatStorageRepo domainChatStorage.IChatStorageRepository
 
 	// Auth Storage (dedicated SQLite for console/web UI users + management panel)
-	authStorageDB  *sql.DB
-	authRepo       domainAuth.IAuthRepository
-	authUsecase    domainAuth.IAuthUsecase
-
+	authStorageDB *sql.DB
+	authRepo      domainAuth.IAuthRepository
+	authUsecase   domainAuth.IAuthUsecase
 
 	// Usecase
 	appUsecase        domainApp.IAppUsecase
@@ -115,8 +114,12 @@ func initEnvConfig() {
 		proxies := strings.Split(envTrustedProxies, ",")
 		config.AppTrustedProxies = proxies
 	}
+	if envIPWhitelist := viper.GetString("app_ip_whitelist"); envIPWhitelist != "" {
+		config.AppIPWhitelist = strings.Split(envIPWhitelist, ",")
+	}
 
 	// Database settings
+
 	if envDBURI := viper.GetString("db_uri"); envDBURI != "" {
 		config.DBURI = envDBURI
 	}
@@ -281,8 +284,15 @@ func initFlags() {
 		config.AppTrustedProxies,
 		`trusted proxy IP ranges for reverse proxy deployments --trusted-proxies <string> | example: --trusted-proxies="0.0.0.0/0" or --trusted-proxies="10.0.0.0/8,172.16.0.0/12"`,
 	)
+	rootCmd.PersistentFlags().StringSliceVarP(
+		&config.AppIPWhitelist,
+		"ip-whitelist", "",
+		config.AppIPWhitelist,
+		`allowed client IPs/CIDRs for REST access --ip-whitelist <string> | example: --ip-whitelist="127.0.0.1,10.0.0.0/8"`,
+	)
 
 	// Database flags
+
 	rootCmd.PersistentFlags().StringVarP(
 		&config.DBURI,
 		"db-uri", "",
