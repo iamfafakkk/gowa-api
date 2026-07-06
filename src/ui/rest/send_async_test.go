@@ -72,6 +72,10 @@ func (f *fakeSendUsecase) SendChatPresence(context.Context, domainSend.ChatPrese
 	return domainSend.GenericResponse{}, nil
 }
 
+func (f *fakeSendUsecase) SendForward(context.Context, domainSend.ForwardRequest) (domainSend.GenericResponse, error) {
+	return domainSend.GenericResponse{}, nil
+}
+
 type fakeSendJobUsecase struct {
 	enqueueResp  domainSend.SendJobAcceptedResponse
 	enqueueErr   error

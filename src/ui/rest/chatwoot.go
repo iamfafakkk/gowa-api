@@ -219,8 +219,8 @@ func (h *ChatwootHandler) SyncHistory(c *fiber.Ctx) error {
 		// Try query parameters as fallback
 		req.DeviceID = c.Query("device_id", config.ChatwootDeviceID)
 		req.DaysLimit = c.QueryInt("days", config.ChatwootDaysLimitImportMessages)
-		req.IncludeMedia = c.QueryBool("media", true)
-		req.IncludeGroups = c.QueryBool("groups", true)
+		req.IncludeMedia = boolPtr(c.QueryBool("media", true))
+		req.IncludeGroups = boolPtr(c.QueryBool("groups", true))
 	}
 
 	// Default values
@@ -278,8 +278,12 @@ func (h *ChatwootHandler) SyncHistory(c *fiber.Ctx) error {
 	// Build sync options
 	opts := chatwoot.DefaultSyncOptions()
 	opts.DaysLimit = req.DaysLimit
-	opts.IncludeMedia = req.IncludeMedia
-	opts.IncludeGroups = req.IncludeGroups
+	if req.IncludeMedia != nil {
+		opts.IncludeMedia = *req.IncludeMedia
+	}
+	if req.IncludeGroups != nil {
+		opts.IncludeGroups = *req.IncludeGroups
+	}
 
 	// Start async sync
 	go func() {
@@ -358,3 +362,5 @@ func (h *ChatwootHandler) SyncStatus(c *fiber.Ctx) error {
 		Results: progress,
 	})
 }
+
+func boolPtr(v bool) *bool { return &v }
