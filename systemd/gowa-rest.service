@@ -1,0 +1,33 @@
+[Unit]
+Description=GoWA WhatsApp REST API - gowa.wss.web.id
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Working directory MUST be src/ because utils.LoadConfig(".") loads .env from CWD
+WorkingDirectory=/home/htdocs/gowa.wss.web.id/src
+
+# Path to the compiled binary
+ExecStart=/home/htdocs/gowa.wss.web.id/src/whatsapp rest
+
+# Restart behaviour
+Restart=always
+RestartSec=10
+
+# Run as a dedicated non-root user (create with: useradd -r -s /sbin/nologin gowa)
+User=gowa
+Group=gowa
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gowa-rest
+
+[Install]
+WantedBy=multi-user.target
