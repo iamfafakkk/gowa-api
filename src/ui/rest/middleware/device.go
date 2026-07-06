@@ -12,13 +12,25 @@ import (
 
 const DeviceIDHeader = "X-Device-Id"
 
+func isFrontendRoute(path string) bool {
+	base := strings.TrimRight(config.AppBasePath, "/")
+	if base != "" && strings.HasPrefix(path, base) {
+		path = strings.TrimPrefix(path, base)
+		if path == "" {
+			path = "/"
+		}
+	}
+
+	return path == "/" || strings.HasPrefix(path, "/console") || strings.HasPrefix(path, "/console-assets/")
+}
+
 // DeviceMiddleware fetches a device instance by header (preferred), path param, or query param
 // and injects it into the context. It falls back to the default/only device for single-device mode.
 func DeviceMiddleware(dm *whatsapp.DeviceManager) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Allow non-device-scoped public endpoints (e.g., landing page) to pass through.
+		// Allow non-device-scoped public endpoints (e.g., landing page and SPA) to pass through.
 		path := strings.TrimSpace(c.Path())
-		if path == "/" || path == "" || path == config.AppBasePath || path == config.AppBasePath+"/" {
+		if isFrontendRoute(path) {
 			return c.Next()
 		}
 
