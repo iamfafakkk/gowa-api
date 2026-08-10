@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newIPWhitelistTestApp(t *testing.T, allowed []string) *fiber.App {
+func newIPWhitelistTestApp(t *testing.T, allowed []string, exemptPrefixes ...string) *fiber.App {
 	t.Helper()
 
-	handler, err := IPWhitelist(allowed)
+	handler, err := IPWhitelist(allowed, exemptPrefixes...)
 	require.NoError(t, err)
 
 	app := fiber.New(fiber.Config{
@@ -25,6 +25,9 @@ func newIPWhitelistTestApp(t *testing.T, allowed []string) *fiber.App {
 	app.Use(handler)
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("ok")
+	})
+	app.Get("/statics/qrcode/scan-qr-test.png", func(c *fiber.Ctx) error {
+		return c.SendString("qr")
 	})
 	return app
 }
@@ -97,4 +100,30 @@ func TestIPWhitelistRejectsInvalidConfig(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid IP whitelist entry")
+}
+
+func TestIPWhitelistAllowsExemptStaticPath(t *testing.T) {
+	app := newIPWhitelistTestApp(t, []string{"203.0.113.10"}, "/statics")
+
+	req := httptest.NewRequest(fiber.MethodGet, "/statics/qrcode/scan-qr-test.png", nil)
+	req.Header.Set(fiber.HeaderXForwardedFor, "198.51.100.20")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.Equal(t, "qr", string(body))
+}
+
+func TestIPWhitelistStillBlocksNonExemptPaths(t *testing.T) {
+	app := newIPWhitelistTestApp(t, []string{"203.0.113.10"}, "/statics")
+
+	status, body := doIPWhitelistRequest(t, app, "198.51.100.20")
+
+	assert.Equal(t, fiber.StatusForbidden, status)
+	assert.Contains(t, body, `"code":"IP_NOT_ALLOWED"`)
 }

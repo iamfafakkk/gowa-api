@@ -14,13 +14,19 @@ type ipWhitelist struct {
 	prefixes []netip.Prefix
 }
 
-func IPWhitelist(allowed []string) (fiber.Handler, error) {
+func IPWhitelist(allowed []string, exemptPrefixes ...string) (fiber.Handler, error) {
 	list, err := parseIPWhitelist(allowed)
 	if err != nil {
 		return nil, err
 	}
 
+	normalizedExempt := normalizeExemptPrefixes(exemptPrefixes)
+
 	return func(c *fiber.Ctx) error {
+		if isExemptPath(c.Path(), normalizedExempt) {
+			return c.Next()
+		}
+
 		if len(list.ips) == 0 && len(list.prefixes) == 0 {
 			return c.Next()
 		}
@@ -63,6 +69,30 @@ func parseIPWhitelist(entries []string) (ipWhitelist, error) {
 		list.ips[addr] = struct{}{}
 	}
 	return list, nil
+}
+
+func normalizeExemptPrefixes(prefixes []string) []string {
+	normalized := make([]string, 0, len(prefixes))
+	for _, prefix := range prefixes {
+		prefix = strings.TrimSpace(prefix)
+		if prefix == "" {
+			continue
+		}
+		if !strings.HasPrefix(prefix, "/") {
+			prefix = "/" + prefix
+		}
+		normalized = append(normalized, strings.TrimRight(prefix, "/"))
+	}
+	return normalized
+}
+
+func isExemptPath(requestPath string, exemptPrefixes []string) bool {
+	for _, prefix := range exemptPrefixes {
+		if requestPath == prefix || strings.HasPrefix(requestPath, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func (w ipWhitelist) allowed(addr netip.Addr) bool {

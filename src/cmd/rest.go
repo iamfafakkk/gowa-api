@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/config"
 	"github.com/aldinokemal/go-whatsapp-web-multidevice/infrastructure/whatsapp"
@@ -47,7 +48,8 @@ func restServer(_ *cobra.Command, _ []string) {
 
 	app.Use(middleware.Recovery())
 	app.Use(middleware.RequestTimeout(middleware.DefaultRequestTimeout))
-	ipWhitelistMiddleware, err := middleware.IPWhitelist(config.AppIPWhitelist)
+	staticExemptPath := strings.TrimRight(config.AppBasePath, "/") + "/statics"
+	ipWhitelistMiddleware, err := middleware.IPWhitelist(config.AppIPWhitelist, staticExemptPath)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
