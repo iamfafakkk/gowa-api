@@ -32,7 +32,7 @@ func IPWhitelist(allowed []string, exemptPrefixes ...string) (fiber.Handler, err
 		}
 
 		addr, err := netip.ParseAddr(strings.TrimSpace(c.IP()))
-		if err != nil || !list.allowed(addr) {
+		if err != nil {
 			return c.Status(fiber.StatusForbidden).JSON(utils.ResponseData{
 				Status:  fiber.StatusForbidden,
 				Code:    "IP_NOT_ALLOWED",
@@ -41,7 +41,16 @@ func IPWhitelist(allowed []string, exemptPrefixes ...string) (fiber.Handler, err
 			})
 		}
 
-		return c.Next()
+		if addr.IsLoopback() || list.allowed(addr) {
+			return c.Next()
+		}
+
+		return c.Status(fiber.StatusForbidden).JSON(utils.ResponseData{
+			Status:  fiber.StatusForbidden,
+			Code:    "IP_NOT_ALLOWED",
+			Message: "IP is not allowed",
+			Results: nil,
+		})
 	}, nil
 }
 

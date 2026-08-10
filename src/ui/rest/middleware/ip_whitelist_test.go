@@ -95,6 +95,19 @@ func TestIPWhitelistBlocksUnknownIP(t *testing.T) {
 	assert.Contains(t, body, `"message":"IP is not allowed"`)
 }
 
+func TestIPWhitelistAllowsLoopbackWhenRestricted(t *testing.T) {
+	app := newIPWhitelistTestApp(t, []string{"203.0.113.10"})
+
+	for _, ip := range []string{"127.0.0.1", "::1"} {
+		t.Run(ip, func(t *testing.T) {
+			status, body := doIPWhitelistRequest(t, app, ip)
+
+			assert.Equal(t, fiber.StatusOK, status)
+			assert.Equal(t, "ok", body)
+		})
+	}
+}
+
 func TestIPWhitelistRejectsInvalidConfig(t *testing.T) {
 	_, err := IPWhitelist([]string{"not-an-ip"})
 
